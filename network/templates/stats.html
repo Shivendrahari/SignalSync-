@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Performance Monitoring | SignalSync</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/1.4.0/chartjs-plugin-annotation.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsPDF/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    .chart-container {
+      position: relative;
+      height: 300px;
+      width: 100%;
+      padding: 15px;
+    }
+    
+    .chart-legend ul {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 10px 0 0;
+    }
+    
+    .chart-legend li {
+      display: flex;
+      align-items: center;
+      margin-right: 15px;
+      font-size: 12px;
+    }
+    
+    .chart-legend .legend-color {
+      width: 15px;
+      height: 15px;
+      border-radius: 3px;
+      margin-right: 5px;
+    }
+    
+    .device-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 12px;
+      margin-right: 5px;
+      margin-bottom: 5px;
+      background-color: #e3f2fd;
+      border: 1px solid #bbdefb;
+      font-size: 12px;
+    }
+    
+    .device-badge i {
+      cursor: pointer;
+      margin-left: 5px;
+      color: #bf360c;
+    }
+    
+    .status-up {
+      color: #4caf50;
+    }
+    
+    .status-down {
+      color: #f44336;
+    }
+  </style>
+</head>
+<body>
+<div class="flex h-screen bg-gray-100">
+  <!-- Sidebar -->
+  <div class="w-64 bg-gray-800 text-white">
+    <div class="px-6 py-4 border-b border-gray-700">
+      <h1 class="text-xl font-bold">SignalSync</h1>
+    </div>
+    
+    <nav class="mt-4">
+      <ul>
+        <li class="px-6 py-3 hover:bg-gray-900">
+          <a href="/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Dashboard
+          </a>
+        </li>
+        <li class="px-6 py-3 hover:bg-gray-900 ">
+          <a href="/network/devices/stats/html/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Performance Monitoring
+          </a>
+        </li>
+        <li class="px-6 py-3 hover:bg-gray-900">
+          <a href="/network/topology/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            Live Topology
+          </a>
+        </li>
+        <li class="px-6 py-3 hover:bg-gray-900">
+          <a href="/network/alerts/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Alerts & Notifications
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+  
+  <!-- Main Content -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Top Nav -->
+    <header class="bg-white shadow h-16 flex items-center justify-between px-6">
+      <div class="flex items-center">
+        <ol class="flex text-gray-500 text-sm">
+            <li><a href="/" class="hover:text-blue-600">Home</a><span class="mx-2">/</span></li>
+            <li class="text-gray-900">Performance Monitoring</li>
+          </ol>          
+      </div>
+      <div class="flex items-center">
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded">Logout</button>
+        </form>
+      </div>
+    </header>    
+      <!-- User Menu -->
+      <div class="flex items-center">
+    </header>
+    
+    <!-- Page Content -->
+    <main class="flex-1 overflow-auto p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-semibold text-gray-800">Performance Monitoring</h1>
+      </div>
+      
+      <!-- Controls Section -->
+      <div class="bg-white rounded-lg shadow p-6 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="col-span-1 md:col-span-1">
+            <label for="deviceSelection" class="block text-sm font-medium text-gray-700 mb-2">
+              <i class="fas fa-server mr-1"></i> Select Devices to Compare:
+            </label>
+            <select id="deviceSelection" class="w-full border border-gray-300 rounded-md shadow-sm p-2" multiple>
+              <!-- Devices will be populated dynamically -->
+            </select>
+            <div id="selectedDevicesTags" class="mt-2 flex flex-wrap"></div>
+          </div>
+          <div class="col-span-1 md:col-span-1">
+            <label for="metricSelection" class="block text-sm font-medium text-gray-700 mb-2">
+              <i class="fas fa-chart-line mr-1"></i> Metric:
+            </label>
+            <select id="metricSelection" class="w-full border border-gray-300 rounded-md shadow-sm p-2">
+              <option value="cpu_usage">CPU Usage (%)</option>
+              <option value="temperature">Temperature (°C)</option>
+              <option value="latency">Latency (ms)</option>
+              <option value="bandwidth">Bandwidth (Mbps)</option>
+            </select>
+          </div>
+          <div class="col-span-1 md:col-span-1">
+            <label class="block text-sm font-medium text-gray-700 mb-2 opacity-0">Action</label>
+            <button id="refreshButton" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <i class="fas fa-sync-alt mr-2"></i> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Time Range Selector -->
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button class="time-btn px-4 py-2 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300" data-days="1">Last 24h</button>
+        <button class="time-btn px-4 py-2 text-sm font-medium rounded-md bg-blue-600 text-white" data-days="7">Last 7 Days</button>
+        <button class="time-btn px-4 py-2 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300" data-days="30">Last 30 Days</button>
+        <button class="time-btn px-4 py-2 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300" data-days="90">Last 3 Months</button>
+        <button class="time-btn px-4 py-2 text-sm font-medium rounded-md bg-gray-200 hover:bg-gray-300" data-days="0" data-toggle="modal" data-target="#customRangeModal">
+          <i class="fas fa-calendar-alt mr-1"></i> Custom
+        </button>
+      </div>
+      
+      <!-- Main Graph Card -->
+      <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <span id="chartTitle" class="text-lg font-medium">Performance Graph</span>
+          <div class="relative">
+            <button type="button" id="exportDropdownButton" class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <i class="fas fa-download mr-2"></i> Export
+              <svg class="ml-2 -mr-0.5 h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+              </svg>
+            </button>
+            <div id="exportDropdown" class="hidden absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-10">
+              <div class="py-1">
+                <button class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" onclick="exportToImage('png')">
+                  <i class="fas fa-image mr-2"></i> PNG Image
+                </button>
+                <button class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" onclick="exportToImage('jpg')">
+                  <i class="fas fa-file-image mr-2"></i> JPG Image
+                </button>
+                <button class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" onclick="exportToPDF()">
+                  <i class="fas fa-file-pdf mr-2"></i> PDF Document
+                </button>
+                <button class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 w-full text-left" onclick="exportToCSV()">
+                  <i class="fas fa-file-csv mr-2"></i> CSV Data
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-4">
+          <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+          </div>
+          <div class="mt-4">
+            <div class="chart-legend" id="chartLegend"></div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Summary Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6" id="summaryStats">
+        <!-- Stats will be populated dynamically -->
+      </div>
+      
+      <!-- Data Table Card -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+          <span class="text-lg font-medium">Data Summary</span>
+          <button class="inline-flex items-center px-3 py-2 border border-blue-600 text-sm leading-4 font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onclick="exportDataTable()">
+            <i class="fas fa-download mr-2"></i> Export Table
+          </button>
+        </div>
+        <div class="p-4">
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200" id="dataTable">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Device</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" id="tableMetricHeader">CPU Usage (%)</th>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200" id="tableBody">
+                <!-- Table rows will be populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Custom Date Range Modal -->
+<div class="fixed inset-0 hidden z-50 overflow-y-auto" id="customRangeModal">
+  <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+    <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+      <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+        <div class="sm:flex sm:items-start">
+          <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+              Select Custom Date Range
+            </h3>
+            <div class="mt-4">
+              <div class="mb-4">
+                <label for="startDate" class="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" id="startDate">
+              </div>
+              <div class="mb-4">
+                <label for="endDate" class="block text-sm font-medium text-gray-700">End Date</label>
+                <input type="date" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md" id="endDate">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+        <button type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm" id="applyCustomRange">
+          Apply
+        </button>
+        <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm" id="cancelCustomRange">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading Spinner Modal -->
+<div class="fixed inset-0 hidden z-50 overflow-y-auto" id="loadingModal">
+  <div class="flex items-center justify-center min-h-screen">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+    <div class="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-center overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-sm sm:w-full sm:p-6">
+      <div class="flex justify-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+      <div class="mt-5">
+        <p class="text-sm text-gray-500">Loading data...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+  // Set up CSRF token for AJAX requests
+  const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  
+  // Random color generator for devices without predefined colors
+  function getRandomColor() {
+    const letters = '0123456789ABCDEF';
+    let color = '#';
+    for (let i = 0; i < 6; i++) {
+      color += letters[Math.floor(Math.random() * 16)];
+    }
+    return color;
+  }
+  
+  // Device colors - we'll add colors dynamically for new devices
+  const deviceColors = {};
+  
+  // Chart instance
+  let performanceChart;
+  
+  // Current metric and selected devices
+  let currentMetric = "cpu_usage";
+  let selectedDevices = [];
+  let devices = [];
+  let timeRange = 7; // Default: 7 days
+  let refreshInterval;
+  
+  // Initialize the application
+  $(document).ready(function() {
+    // Get initial device list
+    fetchDevices();
+    
+    // Set up event listeners
+    setupEventListeners();
+    
+    // Initialize the chart
+    initChart();
+    
+    // Start auto-refresh (every 30 seconds)
+    startAutoRefresh(30);
+  });
+  
+  // Start auto-refresh timer
+  function startAutoRefresh(seconds) {
+    // Clear any existing interval
+    if (refreshInterval) {
+      clearInterval(refreshInterval);
+    }
+    
+    // Set new interval
+    refreshInterval = setInterval(() => {
+      fetchLiveData();
+    }, seconds * 1000);
+  }
+  
+  // Fetch device list from API
+  function fetchDevices() {
+    $.ajax({
+      url: '/api/network/devices/',
+      method: 'GET',
+      headers: {
+        'X-CSRFToken': csrftoken
+      },
+      success: function(response) {
+        devices = response;
+        
+        // Assign colors to devices
+        devices.forEach(device => {
+          if (!deviceColors[device.name]) {
+            deviceColors[device.name] = getRandomColor();
+          }
+        });
+        
+        // Initialize device selector
+        initDeviceSelector();
+        
+        // Set default selected devices (first two if available)
+        if (devices.length > 0) {
+          selectedDevices = devices.slice(0, Math.min(2, devices.length)).map(d => d.id);
+          updateSelectedDevicesTags();
+          fetchHistoricalData();
+        }
+      },
+      error: function(error) {
+        console.error('Error fetching devices:', error);
+      }
+    });
+  }
+  
+  // Fetch current live data for all selected devices
+  function fetchLiveData() {
+    if (selectedDevices.length === 0) return;
+    
+    const devicePromises = selectedDevices.map(deviceId => {
+      return $.ajax({
+        url: `/api/network/devices/${deviceId}/stats/`,
+        method: 'GET',
+        headers: {
+          'X-CSRFToken': csrftoken
+        }
+      });
+    });
+    
+    Promise.all(devicePromises)
+      .then(responses => {
+        // Update the chart with the latest data point
+        updateChartWithLiveData(responses);
+        
+        // Update summary stats
+        updateSummaryStats();
+      })
+      .catch(error => {
+        console.error('Error fetching live data:', error);
+      });
+  }
+  
+  // Fetch historical data for the selected time range
+  function fetchHistoricalData() {
+    if (selectedDevices.length === 0) return;
+    
+    showLoadingModal();
+    
+    const devicePromises = selectedDevices.map(deviceId => {
+      // Use the historical_stats endpoint with the specified days parameter
+      return $.ajax({
+        url: `/api/network/devices/${deviceId}/historical_stats/?days=${timeRange}`,
+        method: 'GET',
+        headers: {
+          'X-CSRFToken': csrftoken
+        }
+      });
+    });
+    
+    Promise.all(devicePromises)
+      .then(responses => {
+        // Process the responses and update the chart
+        processHistoricalData(responses);
+        
+        // Update the data table
+        updateDataTable();
+        
+        // Update summary stats
+        updateSummaryStats();
+        
+        hideLoadingModal();
+      })
+      .catch(error => {
+        console.error('Error fetching historical data:', error);
+        hideLoadingModal();
+      });
+  }
+  
+  // Process historical data responses and update the chart
+  function processHistoricalData(responses) {
+    // Create datasets from the historical data
+    const chartData = {
+      dates: [],
+      datasets: {}
+    };
+    
+    // Process each device's data
+    responses.forEach((response, index) => {
+      const deviceId = selectedDevices[index];
+      const device = devices.find(d => d.id === deviceId);
+      
+      if (device) {
+        // Initialize dataset array for this device
+        chartData.datasets[device.name] = [];
+        
+        // Sort data by timestamp
+        const sortedData = response.sort(
+          (a, b) => new Date(a.timestamp) - new Date(b.timestamp)
+        );
+        
+        // Extract dates and metric values
+        sortedData.forEach(stat => {
+          const date = new Date(stat.timestamp).toLocaleDateString();
+          
+          // Add date to dates array if it doesn't exist
+          if (!chartData.dates.includes(date)) {
+            chartData.dates.push(date);
+          }
+          
+          // Add the metric value to the device's dataset
+          const metricValue = stat[currentMetric] !== null ? stat[currentMetric] : 0;
+          chartData.datasets[device.name].push(metricValue);
+        });
+      }
+    });
+    
+    // Update the chart with the processed data
+    updateChart(chartData);
+  }
+  
+  // Update chart with new live data points
+  function updateChartWithLiveData(responses) {
+    if (!performanceChart || performanceChart.data.datasets.length === 0) return;
+    
+    const currentDate = new Date().toLocaleDateString();
+    
+    // Check if we need to add a new label (new date)
+    if (!performanceChart.data.labels.includes(currentDate)) {
+      performanceChart.data.labels.push(currentDate);
+    }
+    
+    // Update each dataset with the new data point
+    responses.forEach((response, index) => {
+      const deviceId = selectedDevices[index];
+      const device = devices.find(d => d.id === deviceId);
+      
+      if (device) {
+        // Find the corresponding dataset
+        const datasetIndex = performanceChart.data.datasets.findIndex(ds => ds.label === device.name);
+        
+        if (datasetIndex !== -1) {
+          // Add the new data point
+          const metricValue = response[currentMetric] !== null ? response[currentMetric] : 0;
+          performanceChart.data.datasets[datasetIndex].data.push(metricValue);
+          
+          // Remove old data points if we have too many
+          if (performanceChart.data.datasets[datasetIndex].data.length > performanceChart.data.labels.length) {
+            performanceChart.data.datasets[datasetIndex].data.shift();
+          }
+        }
+      }
+    });
+    
+    // Update the chart
+    performanceChart.update();
+    
+    // Also update the data table with the new data
+    updateDataTable();
+  }
+  
+  // Initialize device selector with options
+  function initDeviceSelector() {
+    const deviceSelect = $('#deviceSelection');
+    deviceSelect.empty();
+    
+    devices.forEach(device => {
+      deviceSelect.append(
+        `<option value="${device.id}">${device.name} (${device.ip_address})</option>`
+      );
+    });
+  }
+  
+  // Set up all event listeners
+  function setupEventListeners() {
+    // Metric selection change
+    $('#metricSelection').on('change', function() {
+      currentMetric = $(this).val();
+      fetchHistoricalData();
+      $('#tableMetricHeader').text(getMetricDisplayName(currentMetric));
+    });
+    
+    // Device selection change
+    $('#deviceSelection').on('change', function() {
+      selectedDevices = $(this).val().map(id => parseInt(id));
+      updateSelectedDevicesTags();
+      fetchHistoricalData();
+    });
+    
+    // Refresh button click
+    $('#refreshButton').on('click', function() {
+      showLoadingModal();
+      fetchHistoricalData();
+    });
+    
+    // Time selector buttons
+    $('.time-btn').on('click', function() {
+      if ($(this).data('days') === 0) return; // Skip for custom range button
+      
+      $('.time-btn').removeClass('bg-blue-600 text-white').addClass('bg-gray-200 hover:bg-gray-300');
+      $(this).removeClass('bg-gray-200 hover:bg-gray-300').addClass('bg-blue-600 text-white');
+      
+      timeRange = $(this).data('days');
+      showLoadingModal();
+      fetchHistoricalData();
+    });
+    
+    // Export dropdown
+    $('#exportDropdownButton').on('click', function() {
+      $('#exportDropdown').toggleClass('hidden');
+    });
+    
+    // Close dropdown when clicking outside
+    $(document).on('click', function(event) {
+      if (!$(event.target).closest('#exportDropdownButton').length) {
+        $('#exportDropdown').addClass('hidden');
+      }
+    });
+    
+    // Custom range modal
+    $('[data-toggle="modal"][data-target="#customRangeModal"]').on('click', function() {
+      $('#customRangeModal').removeClass('hidden');
+    });
+    
+    // Custom range modal events
+    $('#applyCustomRange').on('click', function() {
+      const startDate = new Date($('#startDate').val());
+      const endDate = new Date($('#endDate').val());
+      
+      // Check if dates are valid
+      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        alert('Please select valid start and end dates');
+        return;
+      }
+      
+      // Calculate days between dates
+      const diffTime = Math.abs(endDate - startDate);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      // Update timeRange
+      timeRange = diffDays;
+      
+      // Update UI
+      $('.time-btn').removeClass('bg-blue-600 text-white').addClass('bg-gray-200 hover:bg-gray-300');
+      
+      // Close modal
+      $('#customRangeModal').addClass('hidden');
+      
+      // Fetch data
+      showLoadingModal();
+      fetchHistoricalData();
+    });
+    
+    $('#cancelCustomRange').on('click', function() {
+      $('#customRangeModal').addClass('hidden');
+    });
+  }
+  
+  // Initialize chart with empty data
+  function initChart() {
+    const ctx = document.getElementById('performanceChart').getContext('2d');
+    
+    // Create initial chart
+    performanceChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: []
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false // We'll use our custom legend
+          },
+          tooltip: {
+            mode: 'index',
+            intersect: false
+          },
+          annotation: {
+            annotations: {
+              line1: {
+                type: 'line',
+                yMin: 90,
+                yMax: 90,
+                borderColor: 'rgba(255, 99, 132, 0.2)',
+                borderWidth: 2,
+                label: {
+                  content: 'Warning Threshold',
+                  enabled: true,
+                  position: 'start'
+                },
+                display: function(context) {
+                  return context.chart.data.datasets.length > 0 && 
+                         currentMetric === 'cpu_usage';
+                }
+              }
+            }
+          }
+        },
+        scales: {
+          x: {
+            grid: {
+              color: 'rgba(0,0,0,0.05)'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: 'rgba(0,0,0,0.05)'
+            },
+            ticks: {
+              callback: function(value) {
+                if (currentMetric === 'cpu_usage' || currentMetric === 'temperature') {
+                  return value + (currentMetric === 'cpu_usage' ? '%' : '°C');
+                } else if (currentMetric === 'latency') {
+                  return value + 'ms';
+                } else if (currentMetric === 'bandwidth') {
+                  return value + 'Mbps';
+                }
+                return value;
+              }
+            }
+          }
+        },
+        interaction: {
+          mode: 'nearest',
+          axis: 'x',
+          intersect: false
+        }
+      }
+    });
+  }
+  
+  // Update chart with processed data
+  function updateChart(chartData) {
+    // Reset chart datasets
+    performanceChart.data.labels = chartData.dates;
+    performanceChart.data.datasets = [];
+    
+    // Create datasets for each device
+    Object.keys(chartData.datasets).forEach(deviceName => {
+      performanceChart.data.datasets.push({
+        label: deviceName,
+        data: chartData.datasets[deviceName],
+        borderColor: deviceColors[deviceName],
+        backgroundColor: `${deviceColors[deviceName]}30`,
+        borderWidth: 2,
+        tension: 0.3,
+        pointRadius: 2,
+        pointHoverRadius: 5
+      });
+    });
+    
+    // Update chart options based on current metric
+    updateChartYAxis();
+    
+    // Update chart
+    performanceChart.update();
+    
+    // Update chart title
+    updateChartTitle();
+    
+    // Update chart legend
+    updateChartLegend();
+  }
+  
+  // Update chart Y axis settings based on current metric
+  function updateChartYAxis() {
+    let suggestedMax;
+    
+    switch (currentMetric) {
+      case 'cpu_usage':
+        suggestedMax = 100;
+        break;
+      case 'temperature':
+        suggestedMax = 80;
+        break;
+      case 'latency':
+        suggestedMax = 50;
+        break;
+      case 'bandwidth':
+        suggestedMax = 1000;
+        break;
+      default:
+        suggestedMax = undefined;
+    }
+    
+    // Show/hide annotations based on metric
+    if (currentMetric === 'cpu_usage') {
+      performanceChart.options.plugins.annotation.annotations.line1.display = true;
+    } else {
+      performanceChart.options.plugins.annotation.annotations.line1.display = false;
+    }
+    
+    // Update Y axis
+    performanceChart.options.scales.y.suggestedMax = suggestedMax;
+  }
+  
+  // Update chart title with current metric
+  function updateChartTitle() {
+    let title = getMetricDisplayName(currentMetric);
+    $('#chartTitle').text(`${title} Over Time`);
+  }
+  
+  // Get display name for metric
+  function getMetricDisplayName(metricKey) {
+    switch (metricKey) {
+      case 'cpu_usage':
+        return 'CPU Usage (%)';
+      case 'temperature':
+        return 'Temperature (°C)';
+      case 'latency':
+        return 'Latency (ms)';
+      case 'bandwidth':
+        return 'Bandwidth (Mbps)';
+      default:
+        return metricKey;
+    }
+  }
+  
+  // Update custom legend below chart
+  function updateChartLegend() {
+    const legendContainer = $('#chartLegend');
+    legendContainer.empty();
+    
+    // Create legend list
+    const legendList = $('<ul></ul>');
+    
+    // Add items for each dataset
+    performanceChart.data.datasets.forEach((dataset, index) => {
+      const listItem = $('<li></li>');
+      const colorBox = $('<div class="legend-color"></div>').css('background-color', dataset.borderColor);
+      const label = $('<span></span>').text(dataset.label);
+      
+      listItem.append(colorBox, label);
+      legendList.append(listItem);
+    });
+    
+    legendContainer.append(legendList);
+  }
+  
+  // Update selected devices tags
+  function updateSelectedDevicesTags() {
+    const tagsContainer = $('#selectedDevicesTags');
+    tagsContainer.empty();
+    
+    selectedDevices.forEach(deviceId => {
+      const device = devices.find(d => d.id === deviceId);
+      if (device) {
+        const tag = $(`<span class="device-badge">${device.name} <i class="fas fa-times"></i></span>`);
+        
+        // Add click handler to remove device
+        tag.find('i').on('click', function() {
+          selectedDevices = selectedDevices.filter(id => id !== deviceId);
+          updateSelectedDevicesTags();
+          
+          // Update dropdown
+          $('#deviceSelection').val(selectedDevices);
+          
+          // Refresh data
+          fetchHistoricalData();
+        });
+        
+        tagsContainer.append(tag);
+      }
+    });
+  }
+  
+  // Update summary stats cards
+  function updateSummaryStats() {
+    const container = $('#summaryStats');
+    container.empty();
+    
+    // Create a card for each selected device
+    selectedDevices.forEach(deviceId => {
+      const device = devices.find(d => d.id === deviceId);
+      if (!device) return;
+      
+      // Find most recent stats
+      $.ajax({
+        url: `/api/network/devices/${deviceId}/stats/`,
+        method: 'GET',
+        success: function(stats) {
+          // Create card
+          const card = $(`
+            <div class="bg-white rounded-lg shadow p-5">
+              <div class="flex items-center">
+                <div class="bg-blue-100 rounded-full p-3 mr-3">
+                  <i class="fas fa-server text-blue-600"></i>
+                </div>
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-800">${device.name}</h3>
+                  <p class="text-sm text-gray-500">${device.ip_address}</p>
+                </div>
+                <div class="ml-auto">
+                  <span class="status-${stats.cpu_usage > 90 ? 'down' : 'up'}">
+                    <i class="fas fa-${stats.cpu_usage > 90 ? 'exclamation-circle' : 'check-circle'} fa-lg"></i>
+                  </span>
+                </div>
+              </div>
+              <div class="mt-4 grid grid-cols-2 gap-4">
+                <div>
+                  <p class="text-sm text-gray-500">CPU Usage</p>
+                  <p class="text-lg font-semibold">${stats.cpu_usage !== null ? stats.cpu_usage + '%' : 'N/A'}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-500">Temperature</p>
+                  <p class="text-lg font-semibold">${stats.temperature !== null ? stats.temperature + '°C' : 'N/A'}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-500">Latency</p>
+                  <p class="text-lg font-semibold">${stats.latency !== null ? stats.latency + 'ms' : 'N/A'}</p>
+                </div>
+                <div>
+                  <p class="text-sm text-gray-500">Bandwidth</p>
+                  <p class="text-lg font-semibold">${stats.bandwidth !== null ? stats.bandwidth + 'Mbps' : 'N/A'}</p>
+                </div>
+              </div>
+            </div>
+          `);
+          
+          container.append(card);
+        },
+        error: function(error) {
+          console.error('Error fetching stats for device:', device.name, error);
+        }
+      });
+    });
+  }
+  
+  // Update data table with current data
+  function updateDataTable() {
+    const tableBody = $('#tableBody');
+    tableBody.empty();
+    
+    // Create a row for each device's data points
+    selectedDevices.forEach(deviceId => {
+      const device = devices.find(d => d.id === deviceId);
+      if (!device) return;
+      
+      // Get stats for this device
+      $.ajax({
+        url: `/api/network/devices/${deviceId}/stats/`,
+        method: 'GET',
+        success: function(stats) {
+          // Create row
+          const row = $(`
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${new Date().toLocaleString()}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex items-center">
+                  <div class="ml-4">
+                    <div class="text-sm font-medium text-gray-900">${device.name}</div>
+                    <div class="text-sm text-gray-500">${device.ip_address}</div>
+                  </div>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                ${stats[currentMetric] !== null ? stats[currentMetric] : 'N/A'}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${stats.cpu_usage > 90 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
+                  ${stats.cpu_usage > 90 ? 'Critical' : 'Normal'}
+                </span>
+              </td>
+            </tr>
+          `);
+          
+          tableBody.append(row);
+        },
+        error: function(error) {
+          console.error('Error fetching stats for device:', device.name, error);
+        }
+      });
+    });
+  }
+  
+  // Export chart to image format
+  function exportToImage(format = 'png') {
+    if (!performanceChart) return;
+    
+    showLoadingModal();
+    
+    // Get chart canvas
+    const canvas = document.getElementById('performanceChart');
+    
+    // Handle different formats
+    if (format === 'png') {
+      const url = canvas.toDataURL('image/png');
+      downloadImage(url, `performance-chart-${currentMetric}.png`);
+    } else if (format === 'jpg') {
+      const url = canvas.toDataURL('image/jpeg', 0.8);
+      downloadImage(url, `performance-chart-${currentMetric}.jpg`);
+    }
+    
+    hideLoadingModal();
+  }
+  
+  // Helper function to download image
+  function downloadImage(url, filename) {
+    const link = document.createElement('a');
+    link.download = filename;
+    link.href = url;
+    link.click();
+  }
+  
+  // Export chart to PDF
+  function exportToPDF() {
+    if (!performanceChart) return;
+    
+    showLoadingModal();
+    
+    // Get chart canvas
+    const canvas = document.getElementById('performanceChart');
+    
+    // Create PDF
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('landscape', 'mm', 'a4');
+    
+    // Add title
+    pdf.setFontSize(18);
+    pdf.text(getMetricDisplayName(currentMetric) + ' Performance Chart', 20, 20);
+    
+    // Add date
+    pdf.setFontSize(12);
+    pdf.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 30);
+    
+    // Add devices
+    pdf.setFontSize(10);
+    let deviceText = 'Devices: ';
+    selectedDevices.forEach((deviceId, idx) => {
+      const device = devices.find(d => d.id === deviceId);
+      if (device) {
+        deviceText += device.name;
+        if (idx < selectedDevices.length - 1) {
+          deviceText += ', ';
+        }
+      }
+    });
+    pdf.text(deviceText, 20, 40);
+    
+    // Add chart
+    const imgData = canvas.toDataURL('image/png');
+    pdf.addImage(imgData, 'PNG', 20, 45, 250, 120);
+    
+    // Save PDF
+    pdf.save(`performance-chart-${currentMetric}.pdf`);
+    
+    hideLoadingModal();
+  }
+  
+  // Export data to CSV
+  function exportToCSV() {
+    if (selectedDevices.length === 0) return;
+    
+    showLoadingModal();
+    
+    // Generate CSV for selected devices and date range
+    const promises = selectedDevices.map(deviceId => {
+      return $.ajax({
+        url: `/api/network/devices/${deviceId}/historical_stats/?days=${timeRange}`,
+        method: 'GET'
+      });
+    });
+    
+    Promise.all(promises)
+      .then(responses => {
+        // Create CSV content
+        let csvContent = `Device,Timestamp,${getMetricDisplayName(currentMetric)}\n`;
+        
+        // Process each device's data
+        responses.forEach((response, index) => {
+          const deviceId = selectedDevices[index];
+          const device = devices.find(d => d.id === deviceId);
+          
+          if (device) {
+            response.forEach(stat => {
+              csvContent += `${device.name},${new Date(stat.timestamp).toLocaleString()},${stat[currentMetric] !== null ? stat[currentMetric] : 'N/A'}\n`;
+            });
+          }
+        });
+        
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `device-performance-${currentMetric}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        hideLoadingModal();
+      })
+      .catch(error => {
+        console.error('Error exporting to CSV:', error);
+        hideLoadingModal();
+      });
+  }
+  
+  // Export data table to CSV
+  function exportDataTable() {
+    if (selectedDevices.length === 0) return;
+    
+    showLoadingModal();
+    
+    // Generate CSV for selected devices and date range
+    const promises = selectedDevices.map(deviceId => {
+      return $.ajax({
+        url: `/api/network/devices/${deviceId}/historical_stats/?days=${timeRange}`,
+        method: 'GET'
+      });
+    });
+    
+    Promise.all(promises)
+      .then(responses => {
+        // Create CSV content
+        let csvContent = `Device,Timestamp,CPU Usage (%),Temperature (°C),Latency (ms),Bandwidth (Mbps),Status\n`;
+        
+        // Process each device's data
+        responses.forEach((response, index) => {
+          const deviceId = selectedDevices[index];
+          const device = devices.find(d => d.id === deviceId);
+          
+          if (device) {
+            response.forEach(stat => {
+              const status = stat.cpu_usage > 90 ? 'Critical' : 'Normal';
+              csvContent += `${device.name},${new Date(stat.timestamp).toLocaleString()},${stat.cpu_usage !== null ? stat.cpu_usage : 'N/A'},${stat.temperature !== null ? stat.temperature : 'N/A'},${stat.latency !== null ? stat.latency : 'N/A'},${stat.bandwidth !== null ? stat.bandwidth : 'N/A'},${status}\n`;
+            });
+          }
+        });
+        
+        // Download CSV
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `device-stats-table.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        hideLoadingModal();
+      })
+      .catch(error => {
+        console.error('Error exporting data table:', error);
+        hideLoadingModal();
+      });
+  }
+  
+  // Show loading modal
+  function showLoadingModal() {
+    $('#loadingModal').removeClass('hidden');
+  }
+  
+  // Hide loading modal
+  function hideLoadingModal() {
+    $('#loadingModal').addClass('hidden');
+  }
+</script>
+</body>
+</html>

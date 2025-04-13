@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+  <title>Device List - SignalSync</title>
+</head>
+<body>
+<div class="flex h-screen bg-gray-100">
+  <!-- Sidebar -->
+  <div class="w-64 bg-gray-800 text-white">
+    <div class="px-6 py-4 border-b border-gray-700">
+      <h1 class="text-xl font-bold">SignalSync</h1>
+    </div>
+    
+    <nav class="mt-4">
+      <ul>
+        <li class="px-6 py-3 hover:bg-gray-900">
+          <a href="/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+            Dashboard
+          </a>
+        </li>
+        <li class="px-6 py-3 hover:bg-gray-900">
+          <a href="/network/devices/stats/html/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Performance Monitoring
+          </a>
+        </li>
+        <li class="px-6 py-3 hover:bg-gray-900">
+          <a href="/network/topology/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+            Live Topology
+          </a>
+        </li>
+        <li class="px-6 py-3 hover:bg-gray-900">
+          <a href="/network/alerts/" class="flex items-center">
+            <svg class="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Alerts & Notifications
+          </a>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- Main Content -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Top Nav -->
+    <header class="bg-white shadow h-16 flex items-center justify-between px-6">
+      <div class="flex items-center">
+        <ol class="flex text-gray-500 text-sm">
+            <li><a href="/" class="hover:text-blue-600">Home</a><span class="mx-2">/</span></li>
+            <li class="text-gray-900">Dashboard</li>
+          </ol>          
+      </div>
+      <div class="flex items-center">
+        <form method="post" action="{% url 'logout' %}">
+          {% csrf_token %}
+          <button type="submit" class="px-3 py-1 bg-red-600 text-white rounded">Logout</button>
+        </form>
+      </div>
+    </header>
+
+    <!-- Body Content -->
+    <main class="p-6 overflow-y-auto">
+      <h2 class="text-2xl font-bold mb-4">Device List</h2>
+      <p class="mb-4"><strong>Logged in from branch:</strong> {{ branch|default:"Unknown" }}</p>
+
+      <!-- Search Form - Updated to match urls.py -->
+      <form method="GET" action="{% url 'device_list' %}" class="mb-4 flex gap-4">
+        <input type="text" name="q" placeholder="Search by Serial Number, Branch, IP Address, or Name..." class="px-4 py-2 border rounded w-full" {% if query %}value="{{ query }}"{% endif %}>
+        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded">Search</button>
+      </form>
+
+      <!-- Button Group -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        {% if query %}
+          <a href="{% url 'device_list' %}" class="bg-gray-500 text-white px-4 py-2 rounded">Back to Full List</a>
+        {% endif %}
+        {% if show_full_list %}
+          <a href="{% url 'device_list' %}?show_full_list=0" class="bg-blue-600 text-white px-4 py-2 rounded">View My Branch Only</a>
+        {% else %}
+          <a href="{% url 'device_list' %}?show_full_list=1" class="bg-blue-600 text-white px-4 py-2 rounded">View Full List</a>
+        {% endif %}
+        <a href="{% url 'import_csv' %}" class="bg-blue-600 text-white px-4 py-2 rounded">Bulk Import CSV</a>
+        <a href="{% url 'device_add' %}" class="bg-green-600 text-white px-4 py-2 rounded">Add New Device</a>
+      </div>
+
+      <!-- Devices Table -->
+      <div class="overflow-auto">
+        <table class="min-w-full bg-white border rounded">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="p-2 border">Serial Number</th>
+              <th class="p-2 border">IP Address</th>
+              <th class="p-2 border">Device Name</th>
+              <th class="p-2 border">Model</th>
+              <th class="p-2 border">Branch</th>
+              <th class="p-2 border">Status</th>
+              <th class="p-2 border">CPU Usage</th>
+              <th class="p-2 border">Temperature</th>
+              <th class="p-2 border">Latency</th>
+              <th class="p-2 border">Bandwidth</th>
+              <th class="p-2 border">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for device in devices %}
+              <tr class="{% if device.status == 'Up' %}bg-green-100{% else %}bg-red-100{% endif %}">
+                <td class="p-2 border">{{ device.serial_number }}</td>
+                <td class="p-2 border">{{ device.ip_address }}</td>
+                <td class="p-2 border">{{ device.name }}</td>
+                <td class="p-2 border">{{ device.model }}</td>
+                <td class="p-2 border">{{ device.branch }}</td>
+                <td class="p-2 border font-bold">{{ device.status }}</td>
+                <td class="p-2 border">{{ device.cpu_usage|default:"N/A" }}%</td>
+                <td class="p-2 border">{{ device.temperature|default:"N/A" }}°C</td>
+                <td class="p-2 border">{{ device.latency|default:"N/A" }} ms</td>
+                <td class="p-2 border">{{ device.bandwidth|default:"N/A" }} Mbps</td>
+                <td class="p-2 border">
+                  <a href="{% url 'device_edit' device.pk %}" class="text-yellow-600">Edit</a> |
+                  <a href="{% url 'device_delete' device.pk %}" class="text-red-600">Delete</a>
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="11" class="p-4 text-center text-gray-500">No devices found.</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Add JavaScript for modal functionality -->
+<script>
+  // Simple modal handling
+  document.addEventListener('DOMContentLoaded', function() {
+    const modalButton = document.querySelector('[data-toggle="modal"]');
+    const modal = document.getElementById(modalButton.getAttribute('data-target').substring(1));
+    
+    modalButton.addEventListener('click', function() {
+      modal.style.display = 'block';
+      modal.classList.add('show');
+    });
+    
+    // Add close functionality (you'd want to add more for a complete implementation)
+    const closeModal = function() {
+      modal.style.display = 'none';
+      modal.classList.remove('show');
+    };
+    
+    // Close when clicking outside
+    window.addEventListener('click', function(event) {
+      if (event.target === modal) {
+        closeModal();
+      }
+    });
+  });
+  
+  // Search enhancement
+  document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.querySelector('input[name="q"]');
+    if (searchInput) {
+      searchInput.focus();
+      
+      // Add visual feedback when typing
+      searchInput.addEventListener('input', function() {
+        if (this.value.length > 0) {
+          this.classList.add('border-blue-500');
+        } else {
+          this.classList.remove('border-blue-500');
+        }
+      });
+    }
+  });
+</script>
+</body>
+</html>
